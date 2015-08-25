@@ -1,7 +1,7 @@
 /*!
 * Parsleyjs
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 2.2.0-rc1 - built Sun Aug 16 2015 14:04:07
+* Version 2.2.0-rc1 - built Tue Aug 25 2015 13:55:55
 * MIT Licensed
 *
 */
@@ -28,13 +28,13 @@
     // returns object from dom attributes and values
     attr: function ($element, namespace, obj) {
       var
-        attribute, attributes,
+        i, attribute, attributes,
         regex = new RegExp('^' + namespace, 'i');
       if ('undefined' === typeof obj)
         obj = {};
       else {
         // Clear all own properties. This won't affect prototype's values
-        for (var i in obj) {
+        for (i in obj) {
           if (obj.hasOwnProperty(i))
             delete obj[i];
         }
@@ -42,7 +42,7 @@
       if ('undefined' === typeof $element || 'undefined' === typeof $element[0])
         return obj;
       attributes = $element[0].attributes;
-      for (var i = attributes.length; i--; ) {
+      for (i = attributes.length; i--; ) {
         attribute = attributes[i];
         if (attribute && attribute.specified && regex.test(attribute.name)) {
           obj[this.camelize(attribute.name.slice(namespace.length))] = this.deserializeValue(attribute.value);
@@ -299,19 +299,22 @@
     regexp: function(regexp) {
       var flags = '';
       // Test if RegExp is literal, if not, nothing to be done, otherwise, we need to isolate flags and pattern
-      if (!!(/^\/.*\/(?:[gimy]*)$/.test(regexp))) {
+      if (/^\/.*\/(?:[gimy]*)$/.test(regexp)) {
         // Replace the regexp literal string with the first match group: ([gimy]*)
         // If no flag is present, this will be a blank string
         flags = regexp.replace(/.*\/([gimy]*)$/, '$1');
         // Again, replace the regexp literal string with the first match group:
         // everything excluding the opening and closing slashes and the flags
         regexp = regexp.replace(new RegExp('^/(.*?)/' + flags + '$'), '$1');
+      } else {
+        // Anchor regexp:
+        regexp = '^' + regexp + '$';
       }
       return new RegExp(regexp, flags);
     }
   };
   var convertArrayRequirement = function(string, length) {
-    var m = string.match(/^\s*\[(.*)\]\s*$/)
+    var m = string.match(/^\s*\[(.*)\]\s*$/);
     if (!m)
       throw 'Requirement is not an array: "' + string + '"';
     var values = m[1].split(',').map(ParsleyUtils.trimString);
@@ -334,7 +337,7 @@
           value = convertRequirement(requirementSpec[key], value);
         extra[key] = value;
       } else {
-        main = convertRequirement(requirementSpec[key], string)
+        main = convertRequirement(requirementSpec[key], string);
       }
     }
     return [main, extra];
@@ -359,7 +362,7 @@
         if (this.validateNumber) {
           if (isNaN(value))
             return false;
-          value = parseFloat(value);
+          arguments[0] = parseFloat(arguments[0]);
           return this.validateNumber.apply(this, arguments);
         }
         if (this.validateString) {
@@ -383,7 +386,7 @@
           values[i] = convertRequirement(type[i], values[i]);
         return values;
       } else if ($.isPlainObject(type)) {
-        return convertExtraOptionRequirement(type, requirements, extraOptionReader)
+        return convertExtraOptionRequirement(type, requirements, extraOptionReader);
       } else {
         return [convertRequirement(type, requirements)];
       }
@@ -482,7 +485,7 @@
     //          en: "Hey, that's no good",
     //          fr: "Aye aye, pas bon du tout",
     //        }
-    //    }
+    //    })
     //
     // Old API was addValidator(name, function, priority)
     //
@@ -492,7 +495,7 @@
       else if (ParsleyDefaults.hasOwnProperty(name)) {
         ParsleyUtils.warn('"' + name + '" is a restricted keyword and is not a valid validator name.');
         return;
-      };
+      }
       return this._setValidator.apply(this, arguments);
     },
     updateValidator: function (name, arg1, arg2) {
@@ -515,10 +518,10 @@
           fn: validator,
           priority: priority
         };
-      };
+      }
       if (!validator.validate) {
         validator = new ParsleyValidator(validator);
-      };
+      }
       this.validators[name] = validator;
       for (var locale in validator.messages || {})
         this.addMessage(locale, name, validator.messages[locale]);
@@ -1106,7 +1109,7 @@
     // the method actualizeOptions on this form while `fn` is called.
     _withoutReactualizingFormOptions: function (fn) {
       var oldActualizeOptions = this.actualizeOptions;
-      this.actualizeOptions = function() { return this };
+      this.actualizeOptions = function() { return this; };
       var result = fn.call(this); // Keep the current `this`.
       this.actualizeOptions = oldActualizeOptions;
       return result;
@@ -1115,8 +1118,7 @@
     // Shortcut to trigger an event
     // Returns true iff event is not interrupted and default not prevented.
     _trigger: function (eventName) {
-      eventName = 'form:' + eventName;
-      return this.trigger.apply(this, arguments);
+      return this.trigger('form:' + eventName);
     }
   };
 
@@ -1182,7 +1184,7 @@
         case 'pending': return null;
         case 'resolved': return true;
         case 'rejected': return this.validationResult;
-      };
+      }
     },
     // Validate field and trigger some events for mainly `ParsleyUI`
     // @returns a promise that succeeds only when all validations do.
@@ -1387,8 +1389,7 @@
     // Internal only.
     // Shortcut to trigger an event
     _trigger: function (eventName) {
-      eventName = 'field:' + eventName;
-      return this.trigger.apply(this, arguments);
+      return this.trigger('field:' + eventName);
     },
     // Internal only
     // Handles whitespace in a value
@@ -1640,7 +1641,7 @@
       context = arguments[1];
       callback = arguments[2];
     }
-    if ('function' !== typeof arguments[1])
+    if ('function' !== typeof callback)
       throw new Error('Wrong parameters');
     window.Parsley.on(eventName(name), adapt(callback, context));
   };
@@ -1788,7 +1789,7 @@ if ('undefined' !== typeof window.ParsleyValidator)
       if ($('[data-parsley-validate]').length)
         $('[data-parsley-validate]').parsley();
     });
-	return window.Parsley;
+  return window.Parsley;
 }));
 
 (function($){
@@ -1797,14 +1798,18 @@ $.extend(true, window.Parsley, {
   asyncValidators: {
     'default': {
       fn: function (xhr) {
-        return 'resolved' === xhr.state();
+        // By default, only status 2xx are deemed successful.
+        // Note: we use status instead of state() because responses with status 200
+        // but invalid messages (e.g. an empty body for content type set to JSON) will
+        // result in state() === 'rejected'.
+        return xhr.status >= 200 && xhr.status < 300;
       },
       url: false
     },
     reverse: {
       fn: function (xhr) {
         // If reverse option is set, a failing ajax request is considered successful
-        return 'rejected' === xhr.state();
+        return xhr.status < 200 || xhr.status >= 300;
       },
       url: false
     }
